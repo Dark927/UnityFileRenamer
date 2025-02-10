@@ -17,7 +17,9 @@ namespace FileRenamer
 
         private bool _showInputFilesList = false;   // Display input files names.
         private bool _previewResultFilesList = false; // Display processed files names.
-        private Vector2 _scrollPos = Vector2.zero;
+        private Vector2 _globalScrollPos = Vector2.zero;
+        private Vector2 _inputViewScrollPos = Vector2.zero;
+        private Vector2 _resultPreviewScrollPos = Vector2.zero;
 
         #endregion
 
@@ -47,6 +49,8 @@ namespace FileRenamer
 
         private void OnGUI()
         {
+            _globalScrollPos = EditorGUILayout.BeginScrollView(_globalScrollPos, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+
             DisplayHeader();
 
             DisplayFilesSelection();
@@ -56,12 +60,28 @@ namespace FileRenamer
 
 
             DisplayNameTemplateSettings();
-            DisplayToogles();
+            FileRenamerStyleGUI.DrawUILine(Color.black);
+
+            EditorGUILayout.Space();
+            DisplayProcessToggles();
+            EditorGUILayout.Space();
+
+            TryPreviewResult();
+
+            FileRenamerStyleGUI.DrawUILine(Color.black);
+
+            EditorGUILayout.Space();
+            DisplayExportToggles();
+
+            FileRenamerStyleGUI.DrawUILine(Color.black);
+            EditorGUILayout.Space();
 
             ExportFiles();
 
             DisplayErrorMsg();
             DisplayResultMsg();
+
+            EditorGUILayout.EndScrollView();
         }
 
         private static void DisplayHeader()
@@ -78,7 +98,7 @@ namespace FileRenamer
             GUILayout.Label("Files Selection [ Input ]", EditorStyles.boldLabel);
             EditorGUILayout.Space();
 
-            if (GUILayout.Button("Select Files"))
+            if (GUILayout.Button("Select Files", FileRenamerStyleGUI.ButtonsLayouts))
             {
                 _fileRenamer.RequestFiles();
                 ClearMessages();
@@ -87,7 +107,7 @@ namespace FileRenamer
 
         private void DisplaySelectedFilesStatus()
         {
-            if(_fileRenamer == null)
+            if (_fileRenamer == null)
             {
                 Close();
                 return;
@@ -99,10 +119,16 @@ namespace FileRenamer
                 return;
             }
 
+            
             GUILayout.Label($"Selected Files: {_fileRenamer.InputFilePaths.Count}", FileRenamerStyleGUI.GreenLabel);
 
+            if(_fileRenamer.HasMaxInputFiles)
+            {
+                GUILayout.Label($"(max.)", FileRenamerStyleGUI.YellowLabel);
+            }
+
             // Toggle to show/hide the file list
-            DisplayToggle("Show File List", ref _showInputFilesList);
+            DisplayToggle("Show File List", ref _showInputFilesList, FileRenamerStyleGUI.ToggleLabelLayouts);
             TryDisplayInputFilesList();
         }
 
@@ -114,15 +140,16 @@ namespace FileRenamer
             }
 
             EditorGUILayout.Space();
+            FileRenamerStyleGUI.DrawUILine(Color.black);
 
             // Begin a scroll view for long lists
-            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(150));
+            _inputViewScrollPos = EditorGUILayout.BeginScrollView(_inputViewScrollPos, GUILayout.Height(150));
 
             for (int currentFileIndex = 0; currentFileIndex < _fileRenamer.InputFilePaths.Count; currentFileIndex++)
             {
                 string currentFile = _fileRenamer.InputFilePaths[currentFileIndex];
                 EditorGUILayout.BeginHorizontal();
-                GUILayout.Label(Path.GetFileName(currentFile), GUILayout.ExpandWidth(true));
+                GUILayout.Label($"{(currentFileIndex + 1)}.\t{Path.GetFileName(currentFile)}", GUILayout.ExpandWidth(true));
 
 
                 // Button to remove the file
@@ -155,8 +182,6 @@ namespace FileRenamer
             {
                 _fileRenamer.Settings.FileNameTemplate = _fileRenamer.RequestFile() ?? _fileRenamer.Settings.FileNameTemplate;
             }
-
-            TryPreviewResult();
         }
 
         private void TryPreviewResult()
@@ -166,7 +191,7 @@ namespace FileRenamer
                 return;
             }
 
-            DisplayToggle("Preview Result", ref _previewResultFilesList);
+            DisplayToggle("Preview Result", ref _previewResultFilesList, FileRenamerStyleGUI.ToggleLabelLayouts);
 
             if (!_previewResultFilesList)
             {
@@ -179,10 +204,14 @@ namespace FileRenamer
 
         private void PreviewResult()
         {
+            EditorGUILayout.Space();
             GUILayout.Label("Preview:", EditorStyles.boldLabel);
+            FileRenamerStyleGUI.DrawUILine(Color.black);
 
             // Scroll view for displaying old -> new file names
-            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(150));
+            _resultPreviewScrollPos = EditorGUILayout.BeginScrollView(_resultPreviewScrollPos, GUILayout.Height(150), GUILayout.ExpandHeight(true));
+
+            int counter = 1;
 
             foreach (var entry in _fileRenamer.ProcessedFiles)
             {
@@ -191,51 +220,57 @@ namespace FileRenamer
 
                 EditorGUILayout.BeginHorizontal();
 
-                GUILayout.Label(oldFileName, FileRenamerStyleGUI.YellowLabel, GUILayout.Width(200), GUILayout.ExpandWidth(true));
+                GUILayout.Label($"{counter}.   ", GUILayout.Width(30));
+                GUILayout.Label(oldFileName, FileRenamerStyleGUI.YellowLabel, GUILayout.Width(100), GUILayout.ExpandWidth(true));
                 GUILayout.Label(" → ", GUILayout.Width(30));
-                GUILayout.Label(newFileName, FileRenamerStyleGUI.GreenLabel, GUILayout.Width(200), GUILayout.ExpandWidth(true));
+                GUILayout.Label(newFileName, FileRenamerStyleGUI.GreenLabel, GUILayout.Width(100), GUILayout.ExpandWidth(true));
 
                 EditorGUILayout.EndHorizontal();
+                counter++;
             }
 
             EditorGUILayout.EndScrollView();
         }
 
-        private void DisplayToogles()
+        private void DisplayExportToggles()
         {
+            GUILayout.Label("Export Settings [ Settings ]", EditorStyles.boldLabel);
             EditorGUILayout.Space();
-
-            DisplayToggle("Can Overwrite Files",
-                () => _fileRenamer.Settings.OverwriteFiles,
-                value => _fileRenamer.Settings.OverwriteFiles = value,
-                FileRenamerStyleGUI.ToogleLabelLayouts);
-
-            DisplayToggle("Sort Ascending",
-                () => _fileRenamer.Settings.SortAscending,
-                value => _fileRenamer.Settings.SortAscending = value,
-                FileRenamerStyleGUI.ToogleLabelLayouts);
-
-            DisplayToggle("Add Numbering",
-                () => _fileRenamer.Settings.AddNumbering,
-                value => _fileRenamer.Settings.AddNumbering = value,
-                FileRenamerStyleGUI.ToogleLabelLayouts);
-
-            DisplayToggle("Preserve Existing Numbering",
-                () => _fileRenamer.Settings.PreserveExistingNumbering,
-                value => _fileRenamer.Settings.PreserveExistingNumbering = value,
-                FileRenamerStyleGUI.ToogleLabelLayouts);
 
             DisplayToggle("Create Subfolder",
                 () => _fileRenamer.Settings.CreateSubFolder,
                 value => _fileRenamer.Settings.CreateSubFolder = value,
-                FileRenamerStyleGUI.ToogleLabelLayouts);
+                FileRenamerStyleGUI.ToggleLabelLayouts);
 
             DisplayToggle("Open Export Folder",
                 () => _fileRenamer.Settings.OpenExportFolder,
                 value => _fileRenamer.Settings.OpenExportFolder = value,
-                FileRenamerStyleGUI.ToogleLabelLayouts);
+                FileRenamerStyleGUI.ToggleLabelLayouts);
+        }
 
-            EditorGUILayout.Space();
+        private void DisplayProcessToggles()
+        {
+            GUILayout.Label("Process Settings [ Settings ]", EditorStyles.boldLabel);
+
+            DisplayToggle("Can Overwrite Files",
+                () => _fileRenamer.Settings.OverwriteFiles,
+                value => _fileRenamer.Settings.OverwriteFiles = value,
+                FileRenamerStyleGUI.ToggleLabelLayouts);
+
+            DisplayToggle("Sort Ascending",
+                () => _fileRenamer.Settings.SortAscending,
+                value => _fileRenamer.Settings.SortAscending = value,
+                FileRenamerStyleGUI.ToggleLabelLayouts);
+
+            DisplayToggle("Add Numbering",
+                () => _fileRenamer.Settings.AddNumbering,
+                value => _fileRenamer.Settings.AddNumbering = value,
+                FileRenamerStyleGUI.ToggleLabelLayouts);
+
+            DisplayToggle("Preserve Existing Numbering",
+                () => _fileRenamer.Settings.PreserveExistingNumbering,
+                value => _fileRenamer.Settings.PreserveExistingNumbering = value,
+                FileRenamerStyleGUI.ToggleLabelLayouts);
         }
 
         private void DisplayToggle(string label, ref bool relatedParameter, params GUILayoutOption[] labelOptions)
@@ -256,7 +291,7 @@ namespace FileRenamer
 
             GUILayout.Label(label, labelOptions);
             bool newValue = EditorGUILayout.Toggle(getter());
-            setter(newValue); 
+            setter(newValue);
 
             GUILayout.Space(5);
             EditorGUILayout.EndHorizontal();
@@ -264,7 +299,7 @@ namespace FileRenamer
 
         private void ExportFiles()
         {
-            if (GUILayout.Button("Process Files"))
+            if (GUILayout.Button("Process Files", FileRenamerStyleGUI.ButtonsLayouts))
             {
                 _fileRenamer.ProcessFiles();
                 _fileRenamer.TryExportFiles();

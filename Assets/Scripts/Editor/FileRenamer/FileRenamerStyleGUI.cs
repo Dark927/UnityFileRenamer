@@ -30,7 +30,7 @@ namespace FileRenamer.Styles
             GUILayout.Height(24),
         };
 
-        public static readonly GUILayoutOption[] ToogleLabelLayouts = new GUILayoutOption[]
+        public static readonly GUILayoutOption[] ToggleLabelLayouts = new GUILayoutOption[]
         {
             GUILayout.Width(175),
         };

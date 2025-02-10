@@ -12,6 +12,8 @@ namespace FileRenamer
     {
         #region Fields 
 
+        public const int MaxFileLimit = 500;
+
         private List<string> _inputFilePaths;
         private Dictionary<string, string> _processedFiles;
 
@@ -28,6 +30,7 @@ namespace FileRenamer
         #region Properties 
 
         public bool HasInputFiles => _inputFilePaths != null && _inputFilePaths.Count > 0;
+        public bool HasMaxInputFiles => _inputFilePaths != null && _inputFilePaths.Count == MaxFileLimit;
         public FileRenamerSettings Settings => _settings;
         public List<string> InputFilePaths => _inputFilePaths;
         public Dictionary<string, string> ProcessedFiles => _processedFiles;
@@ -63,8 +66,20 @@ namespace FileRenamer
         {
             _inputFilePaths = StandaloneFileBrowser
                 .OpenFilePanel("Select Files", "", FileRenamerSettings.SupportedFileExtensions, true)
+                .Take(MaxFileLimit)
                 .ToList();
             UnsetProcessedStatus();
+
+            if (_inputFilePaths.Count == MaxFileLimit)
+            {
+                Debug.LogWarning($"Only the first {MaxFileLimit} files were selected.");
+            }
+        }
+
+        public string RequestFile()
+        {
+            string[] filePath = StandaloneFileBrowser.OpenFilePanel("Select Template File", "", FileRenamerSettings.SupportedFileExtensions, false);
+            return filePath.Length > 0 ? Path.GetFileNameWithoutExtension(filePath[0]) : null;
         }
 
         public void RemoveInputFilePath(string targetFilePath)
@@ -73,12 +88,6 @@ namespace FileRenamer
             {
                 UnsetProcessedStatus();
             }
-        }
-
-        public string RequestFile()
-        {
-            string[] filePath = StandaloneFileBrowser.OpenFilePanel("Select Template File", "", FileRenamerSettings.SupportedFileExtensions, false);
-            return filePath.Length > 0 ? Path.GetFileNameWithoutExtension(filePath[0]) : null;
         }
 
         public string RequestFolder()
