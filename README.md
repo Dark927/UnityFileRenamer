@@ -1,7 +1,8 @@
 
 # **File Renamer - Unity Editor Tool**
 
-![image](https://github.com/user-attachments/assets/63e38f21-a769-4ccd-b17a-cedf4a0507d7)
+![previewImage](https://github.com/user-attachments/assets/5e2524fe-0d64-4ba7-bc7d-fa2a0dc2d617)
+
 
 ## **Overview**
 **File Renamer** is a **Unity Editor extension** that streamlines batch renaming and organization of image files. It provides an intuitive **UI for selecting, previewing, and renaming multiple files** with customizable templates.
